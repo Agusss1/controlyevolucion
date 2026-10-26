@@ -814,6 +814,19 @@ export const OFFICIAL_DESIGN: WorldDesign = {
     { claimant: 'ULM', x: 0.69, y: 0.29, r: 0.035, reason: 'Estepas ulmaríes' },
     { claimant: 'TEC', x: 0.15, y: 0.75, r: 0.03, reason: 'Desierto de Atamar' }
   ],
+  landmassNames: [
+    { x: 0.21, y: 0.27, name: 'Aurelia' }, { x: 0.64, y: 0.24, name: 'Kharzun y Solvara' }, { x: 0.21, y: 0.68, name: 'Meridia' },
+    { x: 0.79, y: 0.69, name: 'Ostria' }, { x: 0.45, y: 0.085, name: 'Islas Brumas' },
+    { x: 0.05, y: 0.62, name: 'Isla de Sarn' }, { x: 0.94, y: 0.75, name: 'Isla de Halenui' }, { x: 0.58, y: 0.6, name: 'Isla de Myrene' },
+    { x: 0.62, y: 0.67, name: 'Isla de Ardossa' }, { x: 0.55, y: 0.71, name: 'Isla de Kalythea' }, { x: 0.66, y: 0.58, name: 'Isla de Orisia' },
+    { x: 0.6, y: 0.76, name: 'Islas Eunomias' }
+  ],
+  featureNames: [
+    { x: 0.2, y: 0.28, name: 'Montes Cendrios', kind: 'mountains' }, { x: 0.58, y: 0.28, name: 'Cordillera Kharz', kind: 'mountains' },
+    { x: 0.81, y: 0.28, name: 'Cordillera de Zemiria', kind: 'mountains' }, { x: 0.15, y: 0.7, name: 'Sierra Mayor', kind: 'mountains' },
+    { x: 0.78, y: 0.7, name: 'Altos de Ostria', kind: 'mountains' }, { x: 0.45, y: 0.5, name: 'Gran Desierto de Solvara', kind: 'desert' },
+    { x: 0.66, y: 0.34, name: 'Estepas de Ulmar', kind: 'plains' }, { x: 0.22, y: 0.62, name: 'Selva Meridiana', kind: 'forest' }
+  ],
   worldHistory: [
     'Vereth es un mundo de seis grandes masas de tierra: Aurelia, Kharzun, Solvara, Meridia, Ostria y el archipiélago de Velmar.',
     'Entre los siglos XVI y XIX el imperio marítimo castreno colonizó Meridia; las guerras de emancipación (1810-1830) crearon las repúblicas meridianas.',

@@ -67,4 +67,7 @@ export interface WorldDesign {
   claims: DesignClaim[];
   /** historia general del mundo */
   worldHistory: string[];
+  /** nombres diseñados para masas de tierra, accidentes y ríos (se aplican al más cercano) */
+  landmassNames?: { x: number; y: number; name: string }[];
+  featureNames?: { x: number; y: number; name: string; kind: 'mountains' | 'desert' | 'forest' | 'lake' | 'plains' | 'river' }[];
 }

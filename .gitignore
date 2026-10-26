@@ -6,3 +6,4 @@ data/
 coverage
 client/dist
 .DS_Store
+backups/

@@ -2,6 +2,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { startApp, post, connect, waitFor, tempDb, hashState, type Client } from './helpers.js';
 import type { App } from '../server/src/app.js';
+import { exportGames, importGames } from '../server/src/backup.js';
 
 const apps: App[] = [];
 const clients: Client[] = [];
@@ -157,6 +158,32 @@ describe('persistencia', () => {
     expect(again!.state.countries.MOR.taxes.vat).toBe(0.19);
     const b = await client(app2, g.gameId, g.playerId, g.token);
     expect((b.init.you as { countryId: string }).countryId).toBe('MOR');
+  });
+
+  it('una copia de seguridad restaurada en otra base reproduce la misma partida', async () => {
+    const app = await newApp({ msPerDay: 120, sqlitePath: tempDb() });
+    const g = await post<Created>(app, '/api/games', { settings: { clockMode: 'always' }, playerName: 'Ana', countryId: 'KHA' });
+    const a = await client(app, g.gameId, g.playerId, g.token);
+    await a.emit('admin:start');
+    const inst = app.manager.loaded(g.gameId)!;
+    await waitFor(() => inst.state.day >= 5);
+    await a.command({ type: 'setTaxes', taxes: { corporate: 0.31 } });
+    await waitFor(() => inst.state.day >= 9);
+    await a.emit('admin:settings', { clockMode: 'paused' });
+    await new Promise((r) => setTimeout(r, 100));
+    a.close();
+    await waitFor(() => !inst.anyoneConnected());
+    const hash = hashState({ ...inst.state, onlineCountries: [] });
+    const day = inst.state.day;
+    await app.manager.unload(g.gameId);
+    const file = JSON.parse(JSON.stringify(await exportGames(app.store)));
+    const app2 = await newApp({ msPerDay: 120, sqlitePath: tempDb() });
+    const r = await importGames(app2.store, file);
+    expect(r.restored).toContain(g.gameId);
+    const again = await app2.manager.get(g.gameId);
+    expect(again!.state.day).toBe(day);
+    expect(hashState({ ...again!.state, onlineCountries: [] })).toBe(hash);
+    expect((await importGames(app2.store, file)).skipped).toContain(g.gameId);
   });
 
   it('funciona también sobre PostgreSQL', async () => {

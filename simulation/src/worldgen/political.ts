@@ -312,6 +312,32 @@ export function buildPolitical(design: WorldDesign): PoliticalResult {
     features.push({ kind: 'river', name: r.name, cx: round2(cx), cy: round2(cy) });
   }
 
+  // nombres diseñados (mundo oficial)
+  const normOf = (cx: number, cy: number): [number, number] => [cx / (Math.sqrt(3) * W), cy / (1.5 * H)];
+  for (const n of design.landmassNames ?? []) {
+    let best: LandmassStatic | null = null, bd = Infinity;
+    for (const p of provinces) {
+      const [x, y] = normOf(p.cx, p.cy);
+      const d = Math.hypot(x - n.x, y - n.y);
+      if (d < bd) { bd = d; best = landmasses[p.landmass]; }
+    }
+    if (best) best.name = n.name;
+  }
+  for (const n of design.featureNames ?? []) {
+    let best: MapFeature | null = null, bd = 0.09;
+    for (const f of features) {
+      if (f.kind !== n.kind) continue;
+      const [x, y] = normOf(f.cx, f.cy);
+      const d = Math.hypot(x - n.x, y - n.y);
+      if (d < bd) { bd = d; best = f; }
+    }
+    if (best) {
+      const old = best.name;
+      best.name = n.name;
+      if (n.kind === 'river') { const r = rivers.find((rv) => rv.name === old); if (r) r.name = n.name; }
+    }
+  }
+
   const cellProv = new Uint16Array(W * H);
   const cellSea = new Uint16Array(W * H);
   const elev = new Uint8Array(W * H);

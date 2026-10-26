@@ -8,6 +8,8 @@ import { renderTerrain, renderOverlay, rgba, ramp, PX, getProvincePaths } from '
 import { command } from '../net/connection';
 import { loadPrefs } from '../net/api';
 
+const EMPTY: never[] = [];
+
 interface Camera { x: number; y: number; zoom: number }
 
 const ORG_COLORS = ['#e2c27a', '#e5534b', '#58a6ff', '#3fb950', '#bc8cff', '#f778ba', '#ffa657', '#79c0ff', '#a5d6ff', '#7ee787'];
@@ -76,7 +78,7 @@ export function MapView() {
   const me = useGame((s) => s.you?.countryId ?? null);
   const selectedProvince = useGame((s) => s.selectedProvince);
   const selectedUnits = useGame((s) => s.selectedUnits);
-  const hostile = useGame((s) => s.priv?.hostile ?? []);
+  const hostile = useGame((s) => s.priv?.hostile) ?? EMPTY;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const cam = useRef<Camera>({ x: 0, y: 0, zoom: 4 });

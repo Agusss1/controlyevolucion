@@ -137,6 +137,7 @@ export class GameManager {
     const g = this.games.get(id);
     if (!g) return;
     await g.snapshot();
+    g.dispose();
     this.games.delete(id);
   }
 
