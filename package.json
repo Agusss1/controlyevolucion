@@ -1,0 +1,28 @@
+{
+  "name": "cyo",
+  "private": true,
+  "version": "0.1.0",
+  "description": "CYO — simulador geopolítico multijugador persistente en un mundo ficticio (inicio 1 de enero de 1990)",
+  "type": "module",
+  "workspaces": ["shared", "simulation", "server", "client"],
+  "scripts": {
+    "dev": "npm run dev --workspace server & npm run dev --workspace client",
+    "dev:server": "npm run dev --workspace server",
+    "dev:client": "npm run dev --workspace client",
+    "build": "npm run build --workspace client",
+    "start": "npm run start --workspace server",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p client/tsconfig.json --noEmit",
+    "world:official": "tsx scripts/build-official-world.ts",
+    "world:preview": "tsx scripts/preview-world.ts",
+    "docs:world": "tsx scripts/generate-world-docs.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "socket.io-client": "^4.8.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}
