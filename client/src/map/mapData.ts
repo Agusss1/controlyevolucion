@@ -22,6 +22,8 @@ export interface MapGeometry {
   provinceBorders: Path2D;
   coast: Path2D;
   riverPaths: { path: Path2D; navigable: boolean }[];
+  /** cruces por estrecho: segmento entre las celdas más próximas de ambas provincias */
+  straits: [number, number, number, number][];
   /** aristas compartidas entre pares de provincias (clave "i|j") */
   edges: Map<string, [number, number, number, number][]>;
 }
@@ -68,9 +70,22 @@ export function getGeometry(map: WorldMap): MapGeometry {
     r.cells.forEach((c, k) => { const [x, y] = cellCenter(c, W); if (k === 0) path.moveTo(x, y); else path.lineTo(x, y); });
     return { path, navigable: r.navigable };
   });
+  const straits: [number, number, number, number][] = [];
+  map.provinces.forEach((p, i) => {
+    for (const l of p.neighbors) {
+      const j = provIndex.get(l.to);
+      if (l.kind !== 'strait' || j === undefined || j < i) continue;
+      let best: [number, number, number, number] | null = null, bd = Infinity;
+      for (const a of provCells[i]) {
+        const [ax, ay] = cellCenter(a, W);
+        for (const b of provCells[j]) { const [bx, by] = cellCenter(b, W); const d = (ax - bx) ** 2 + (ay - by) ** 2; if (d < bd) { bd = d; best = [ax, ay, bx, by]; } }
+      }
+      if (best) straits.push(best);
+    }
+  });
   cached = {
     map, width: W, height: H, worldW: SQRT3 * (W + 0.5), worldH: 1.5 * H + 0.5, terrain, elevation, cellProv, cellSea, river, provIndex, provCells,
-    provinceBorders, coast, riverPaths, edges
+    provinceBorders, coast, riverPaths, straits, edges
   };
   return cached;
 }

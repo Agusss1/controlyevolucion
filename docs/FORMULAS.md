@@ -33,7 +33,12 @@ Y_s,ef = Y_s · (1 + brecha · [0,2 si extractivo, 1 si no]) · (1 − 0,55·esc
 
 ## 2. Mercados de materias primas y comercio (`economy.ts › worldTrade`)
 
-- **Mercados mundiales** de alimentos, petróleo, gas, carbón y minerales. Cada país ofrece su producción y demanda según sus sectores. El precio se ajusta con el exceso de demanda. La parte que cada importador consigue cubrir depende de su **accesibilidad relativa**, que reúne la distancia entre capitales, los tratados, los bloqueos, las sanciones y las barreras comerciales.
+- **Mercados mundiales** de alimentos, petróleo, gas, carbón y minerales. Cada país ofrece su producción y demanda según sus sectores. Las cantidades responden al precio relativo `r = p/p₀`:
+  - **Oferta:** con precios bajos, los productores recortan la extracción. Los factores son `clamp(r^0,5, 0,5, 1)` para combustibles y minerales y `clamp(r^0,3, 0,85, 1)` para alimentos. Lo no extraído queda en el subsuelo y el recorte reduce el producto del sector.
+  - **Demanda:** el factor es `clamp(r^−0,2, 0,7, 1,5)`.
+  - **Precio:** sigue `p* = p·(demandaImportadora/ofertaExportable)^0,5` (τ = 0,1 años), entre 0,25·p₀ y 8·p₀.
+  
+  Así existe un equilibrio interior. En una corrida de 10 años sin jugadores, el petróleo se mantiene entre 0,84 y 0,96·p₀. La parte que cada importador consigue cubrir depende de su **accesibilidad relativa**, que reúne la distancia entre capitales, los tratados, los bloqueos, las sanciones y las barreras comerciales.
 - **Manufacturas y servicios.** El comercio sigue un modelo de **gravedad**: `flujo_ab ∝ PIB_a·PIB_b·acceso_ab / distancia`. El sesgo exportador de cada país se calibra para que el saldo comercial de 1990 sea plausible.
 - **Términos de intercambio.** La renta nacional es `Y + Σ (p/p₀ − 1)·(exportaciones − importaciones)`. Cuando el petróleo se encarece, el exportador gana renta y el importador la pierde.
 - **Escasez.** Si falta energía, se sustituye entre combustibles. Lo que no se cubre aumenta `escasezEnergía`. Si faltan alimentos, aumenta `escasezAlimentos`, que eleva la pobreza, la inflación y el malestar.
@@ -100,8 +105,9 @@ invPública empresarial = 0,6·excedenteEmpresasEstatales·(1 − ineficiencia) 
 - La inversión privada va a los sectores según su rendimiento esperado: `α·Y/K · señalPrecio^1,2 · (1+margen) · (1 − 0,45·topePrecio) · (1 − 0,8·cuotaEstatal) · (1+subsidio)`.
 - El capital neto de cada sector cambia en `(inversión − depreciación·K)·dt`.
 - La **PTF** crece a la tasa
-  `0,004 + 0,012·(capHumano − 0,5) + 0,006·(infra − 0,5) + 0,012·brechaFrontera·apertura·(0,4 + aperturaIED)·capHumano − 0,008·corrupción − 0,005·regulación − 0,006·controles + 0,004·(indepJudicial − 0,5) − 0,01·cansancioBélico`.
-  Así, los países pobres con apertura y capital humano convergen; la corrupción y la guerra los frenan.
+  `0,004 + 0,012·(capHumano − 0,5) + 0,006·(infra − 0,5) + convergencia − 0,005·corrupción − 0,003·regulación − 0,004·controles + 0,004·(indepJudicial − 0,5) − 0,01·cansancioBélico`,
+  con `convergencia = 0,03·brechaFrontera^1,5·(0,3 + 0,7·apertura)·(0,5 + 0,5·aperturaIED)·(0,5 + capHumano)` y `brechaFrontera = 1 − PIBpc/28 000`.
+  Los países pobres y abiertos convergen; la corrupción, los controles y la guerra los frenan. Con los parámetros de 1990, los países ricos tienen una PTF de alrededor de +1 %/año y los pobres, de +0,3 a +0,7 %.
 
 ## 6. Fiscalidad (`fiscal.ts`)
 
@@ -158,10 +164,10 @@ capitalPolítico += dt·(6 + 10·(aprobación − 45)/50 + 6·(legitimidad − 5
 ## 9. Tecnología (`tech.ts`)
 
 ```
-puntos = 45·(cienciaReal)^0,6·(0,4 + capHumano)·(1 + bonusInvestigación) + 6·capHumano + 0,6·producciónSectorTecnológico
+puntos = 90·√(cienciaReal)·(0,4 + capHumano)·(1 + bonusInvestigación) + 40·capHumano + 0,6·producciónSectorTecnológico
          + Σ socios científicos · cuota · puntos del socio
-coste = costeBase · varianza_país · difusión · adelanto
-difusión = clamp(1 − 0,72·adopciónMundial^0,8·(0,5 + 0,5·apertura) − 0,04·socios − 0,08·aperturaIED·adopción, 0,15, 1)
+coste = 0,55 · costeBase · varianza_país · difusión · adelanto
+difusión = clamp(1 − 0,8·adopciónMundial^0,6·(0,5 + 0,5·apertura) − 0,04·socios − 0,08·aperturaIED·adopción, 0,15, 1)
 adelanto = 1 + 0,09·max(0, añoMadurez − añoActual − 2)
 ```
 
@@ -184,6 +190,7 @@ poder = base(ataque|defensa) · fuerza · (0,3 + 0,7·equipo) · (0,35 + 0,65·o
 - También cuentan el reconocimiento (inteligencia y fuerzas especiales) y el apoyo naval en costas con dominio 1,5:1.
 - **Pérdidas diarias:** el defensor pierde `0,012·ratio^0,75·ruido` y el atacante `0,011·ratio^(−0,75)·ruido` (×1,5 en desembarcos).
 - **Suministro:** se traza por provincias controladas desde la capital y los puertos. Los bloqueos y las interdicciones navales lo cortan.
+- **Estrechos:** el generador crea un enlace de tipo estrecho entre provincias costeras de masas distintas separadas por un canal de una o dos celdas de mar. Cruzarlo cuesta ×3 en movimiento y +0,5 en el bonus defensivo, y queda cerrado si un enemigo domina el mar adyacente (poder naval > 1,2 veces el propio). Fuera de los estrechos, cruzar el mar exige una flota anfibia.
 - **Ocupación:** la ocupación cambia el **control** de la provincia, no su **soberanía**. La soberanía solo cambia con un tratado de paz (cesiones), una unificación, una independencia o, para países de IA, la capitulación tras 60 días totalmente ocupados.
 
 ## 11. Guerras sincronizadas entre humanos
@@ -202,6 +209,7 @@ poder = base(ataque|defensa) · fuerza · (0,3 + 0,7·equipo) · (0,35 + 0,65·o
 
 - **Independencia:** el separatismo alto y sostenido, o una decisión de evento, crea un país completo. Recibe un **identificador nuevo y persistente**, bandera, capital, gobierno, partidos, economía (con el capital de sus provincias), deuda proporcional, ejército inicial y relaciones heredadas.
 - **Unificación:** se hace por tratado. El Estado mayor absorbe al menor y conserva su identificador; recibe provincias, unidades, equipo, Tesoro y deudas.
+- **Colapso estatal** (`events.ts › stateCollapse`): cada mes se evalúa si el Estado está fallido (`estabilidad < 12`, `legitimidad < 22` y además default, radicalización media > 0,5, cansancio bélico > 0,6 o escasez de alimentos > 0,25). Un contador suma 1 por cada mes fallido y resta 1 por cada mes normal. A los 3 meses se emite una alerta; a los 6 (`COLLAPSE_MONTHS`), el Estado se fragmenta. Se separa cada región de minoría cultural con malestar medio > 0,35; si ninguna llega a ese nivel, solo la más inquieta. Si el país no tiene minorías, se separa el bloque contiguo más alejado de la capital (hasta un tercio de las provincias). Los sucesores reciben guardias iniciales, el remanente cambia de régimen y la población se conserva exactamente. Un país humano desconectado no colapsa.
 - Los países desaparecidos se conservan en el historial y su identificador no se reutiliza.
 
 ## 13. Inteligencia artificial (`ai.ts`)

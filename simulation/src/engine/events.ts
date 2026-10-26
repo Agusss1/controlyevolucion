@@ -6,7 +6,7 @@ import { borrow } from './fiscal.js';
 import { enactLaw, applyRegimeChange } from './politics.js';
 import { createCountry } from './states.js';
 import { createUnit, declareWar } from './military.js';
-import { TERRAIN } from '@cyo/shared';
+import { TERRAIN, formatDate } from '@cyo/shared';
 import { isDemocratic } from '../data/laws.js';
 
 /**
@@ -161,6 +161,79 @@ export function independence(sim: Sim, parent: CountryState, provinceIds: string
   return n;
 }
 
+/** Meses consecutivos (netos) de Estado fallido que desencadenan el colapso. */
+export const COLLAPSE_MONTHS = 6;
+
+/**
+ * Colapso estatal: el Estado se fragmenta. Cada región de minoría con malestar forma un Estado propio;
+ * si no hay minorías, se separa el bloque contiguo de provincias más alejado de la capital. El resto
+ * del país sufre un cambio de régimen. Los sucesores son Estados completos (createCountry).
+ */
+export function stateCollapse(sim: Sim, c: CountryState): CountryState[] {
+  const st = sim.state;
+  const owned = Object.values(st.provinces).filter((p) => p.owner === c.id && p.controller === c.id);
+  const all = Object.values(st.provinces).filter((p) => p.owner === c.id);
+  c.cooldowns.failingMonths = 0;
+  if (all.length < 3) return [];
+  const groups: string[][] = [];
+  const byCulture = new Map<string, string[]>();
+  for (const p of owned) if (p.culture !== c.culture && p.id !== c.capital) { const l = byCulture.get(p.culture) ?? []; l.push(p.id); byCulture.set(p.culture, l); }
+  // solo se separan las regiones inquietas (malestar medio > 0,35); si ninguna lo está, la más inquieta
+  const unrestOf = (ids: string[]) => { let u = 0, w = 0; for (const id of ids) { const p = st.provinces[id]; u += p.unrest * p.pop; w += p.pop; } return w > 0 ? u / w : 0; };
+  const minorities = [...byCulture.entries()].map(([k, ids]) => ({ k, ids, u: unrestOf(ids) })).sort((a, b) => b.u - a.u || (a.k < b.k ? -1 : 1));
+  const restless = minorities.filter((m) => m.u > 0.35);
+  for (const m of restless.length ? restless : minorities.slice(0, 1)) groups.push(m.ids);
+  if (!groups.length) {
+    // bloque periférico: búsqueda en anchura desde la capital; se separa la región más lejana y contigua
+    const dist = new Map<string, number>([[c.capital, 0]]);
+    const queue = [c.capital];
+    const mine = new Set(owned.map((p) => p.id));
+    while (queue.length) {
+      const id = queue.shift()!;
+      for (const l of sim.idx.provinces.get(id)!.neighbors) if (mine.has(l.to) && !dist.has(l.to)) { dist.set(l.to, dist.get(id)! + 1); queue.push(l.to); }
+    }
+    const far = [...dist.entries()].sort((a, b) => b[1] - a[1] || (a[0] < b[0] ? -1 : 1))[0];
+    if (far && far[1] > 0) {
+      const target = Math.max(1, Math.floor(all.length / 3));
+      const block = [far[0]];
+      const inBlock = new Set(block);
+      for (let i = 0; i < block.length && block.length < target; i++) {
+        for (const l of sim.idx.provinces.get(block[i])!.neighbors) {
+          if (block.length >= target) break;
+          if (mine.has(l.to) && !inBlock.has(l.to) && l.to !== c.capital && (dist.get(l.to) ?? 0) >= far[1] / 2) { block.push(l.to); inBlock.add(l.to); }
+        }
+      }
+      groups.push(block);
+    }
+  }
+  const created: CountryState[] = [];
+  let remaining = all.length;
+  for (const g of groups) {
+    const ids = g.filter((id) => st.provinces[id].owner === c.id);
+    if (!ids.length || ids.length >= remaining) continue;
+    const n = createCountry(sim, c, ids, { reason: `Surgió del colapso del Estado ${c.adjective}.`, hostile: false, regime: sim.rng.chance(0.5) ? 'presidential_republic' : 'military_junta' });
+    if (!n) continue;
+    remaining -= ids.length;
+    relation(st, n.id, c.id).recognized = true;
+    n.history[0] = `Se separó de ${c.name} durante su colapso, el ${formatDate(sim.day)}.`;
+    for (let i = 0; i < Math.min(3, ids.length); i++) { const u = createUnit(sim, n, 'infantry', ids[i], true, `${i + 1}.ª Guardia de ${n.name}`); u.training = 0.4; u.equipment = 0.5; }
+    created.push(n);
+  }
+  if (!created.length) return created;
+  // el Estado remanente: cambio de régimen y reconstrucción
+  const prev = c.regime;
+  const next = isDemocratic(prev) ? 'military_junta' : 'presidential_republic';
+  c.laws.regime = next;
+  applyRegimeChange(sim, c, prev, next, true);
+  sim.invalidateParams(c.id);
+  for (const g of Object.values(c.groups)) g.radical *= 0.5;
+  c.politics.legitimacy = 35; c.politics.stability = 30; c.politics.protest *= 0.5;
+  c.history.push(`Colapso estatal el ${formatDate(sim.day)}: se separaron ${created.map((n) => n.name).join(', ')}.`);
+  sim.emit('state_collapse', 'world', 'critical', [c.id, ...created.map((n) => n.id)], `Colapso de ${c.longName}`,
+    `El Estado ${c.adjective} se fragmenta: nacen ${created.map((n) => n.name).join(', ')}. Lo que queda de ${c.name} pasa a ser ${next === 'military_junta' ? 'una junta militar' : 'una república presidencial'}.`);
+  return created;
+}
+
 /** Comprobaciones mensuales por país (escalonadas para repartir la carga). */
 export function countryEventsStep(sim: Sim, c: CountryState): void {
   const pol = c.politics, lp = sim.params(c), e = c.econ;
@@ -232,6 +305,11 @@ export function countryEventsStep(sim: Sim, c: CountryState): void {
       if (provs.length) independence(sim, c, provs, true);
     }
   }
+  // Estado fallido: meses sostenidos de ingobernabilidad terminan en fragmentación
+  const failing = pol.stability < 12 && pol.legitimacy < 22 && (c.fiscal.inDefault || avgRad > 0.5 || c.military.warExhaustion > 0.6 || e.foodShortage > 0.25);
+  cd.failingMonths = failing ? (cd.failingMonths ?? 0) + 1 : Math.max(0, (cd.failingMonths ?? 0) - 1);
+  if (cd.failingMonths === 3 && ready('failing', 360)) { mark('failing'); sim.emit('state_failing', 'world', 'critical', [c.id], `${c.name} al borde del colapso`, 'El gobierno central pierde el control de varias regiones; las autoridades locales actúan por su cuenta.'); }
+  if (cd.failingMonths >= COLLAPSE_MONTHS && (!sim.isHuman(c.id) || sim.isOnline(c.id))) stateCollapse(sim, c);
   // hambruna
   if (e.foodShortage > 0.2 && ready('famine', 360)) { mark('famine'); sim.emit('famine', 'world', 'critical', [c.id], `Hambruna en ${c.name}`, 'La escasez de alimentos provoca muertes y desplazamientos.'); }
   // catástrofes naturales (por provincia, raras)

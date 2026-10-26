@@ -200,6 +200,25 @@ export function worldTrade(sim: Sim, prod: Map<string, { output: Record<SectorId
   const commodityIds: CommodityId[] = ['food', 'oil', 'gas', 'coal', 'minerals'];
   const commExp = countries.map(() => 0), commImp = countries.map(() => 0);
   const commodityFlows = new Map<string, number>();
+  // respuesta de cantidades al precio: con precios bajos los productores recortan extracción (lo no
+  // extraído queda en el subsuelo) y el consumo aumenta; así el mercado tiene un equilibrio interior
+  const supplyF = {} as Record<CommodityId, number>;
+  for (const k of commodityIds) {
+    const r = st.markets[k].price / st.markets[k].basePrice;
+    supplyF[k] = k === 'food' ? clamp(Math.pow(r, 0.3), 0.85, 1) : clamp(Math.pow(r, 0.5), 0.5, 1);
+    const demandF = clamp(Math.pow(r, -0.2), 0.7, 1.5);
+    for (const c of countries) { const pd = prod.get(c.id)!; pd.demand[k] *= demandF; }
+  }
+  for (const c of countries) {
+    const pd = prod.get(c.id)!, cm = pd.commodities, out = pd.output;
+    const mined = cm.coal + cm.minerals;
+    if (mined > 0) out.mining *= (cm.coal * supplyF.coal + cm.minerals * supplyF.minerals) / mined;
+    out.oil *= supplyF.oil;
+    out.gas *= supplyF.gas;
+    out.agriculture *= supplyF.food;
+    out.livestock *= supplyF.food;
+    for (const k of commodityIds) cm[k] *= supplyF[k];
+  }
   for (const k of commodityIds) {
     const surplus = countries.map((c) => Math.max(0, prod.get(c.id)!.commodities[k] - prod.get(c.id)!.demand[k]));
     const deficit = countries.map((c) => Math.max(0, prod.get(c.id)!.demand[k] - prod.get(c.id)!.commodities[k]));
@@ -494,8 +513,10 @@ export function macroStep(sim: Sim, c: CountryState, inp: MacroInputs, dt: numbe
   const hc = c.stocks.humanCapital, infra = c.stocks.infrastructure;
   const frontierGap = clamp(1 - gdppc / 28000, 0, 1);
   const openness = 1 - lp.tradeBarriers;
-  const tfpGrowth = 0.004 + 0.012 * (hc - 0.5) + 0.006 * (infra - 0.5) + 0.012 * frontierGap * openness * (0.4 + lp.fdiOpenness) * hc
-    - 0.008 * (pol.corruption / 100) - 0.005 * lp.regulation - 0.006 * lp.priceControls + 0.004 * (lp.judicialIndependence - 0.5) - 0.01 * c.military.warExhaustion;
+  // convergencia: cuanto más lejos de la frontera, más se gana adoptando tecnología ajena (si hay apertura)
+  const catchUp = 0.03 * Math.pow(frontierGap, 1.5) * (0.3 + 0.7 * openness) * (0.5 + 0.5 * lp.fdiOpenness) * (0.5 + hc);
+  const tfpGrowth = 0.004 + 0.012 * (hc - 0.5) + 0.006 * (infra - 0.5) + catchUp
+    - 0.005 * (pol.corruption / 100) - 0.003 * lp.regulation - 0.004 * lp.priceControls + 0.004 * (lp.judicialIndependence - 0.5) - 0.01 * c.military.warExhaustion;
   for (const s of SECTORS) e.sectors[s].tfp *= Math.exp(tfpGrowth * dt);
 
   // ---------------- tipo de cambio, reservas y balanza de pagos

@@ -80,6 +80,16 @@ export function renderTerrain(geo: MapGeometry): HTMLCanvasElement {
     ctx.lineCap = 'round';
     ctx.stroke(r.path);
   }
+  // estrechos: cruces terrestres sobre el mar (cerrables por dominio naval enemigo)
+  ctx.setLineDash([0.5, 0.35]);
+  ctx.lineCap = 'butt';
+  for (const [x1, y1, x2, y2] of geo.straits) {
+    ctx.strokeStyle = 'rgba(12,24,38,0.8)'; ctx.lineWidth = 0.6;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(232,206,140,0.95)'; ctx.lineWidth = 0.32;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  ctx.setLineDash([]);
   return cv;
 }
 

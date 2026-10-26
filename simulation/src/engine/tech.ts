@@ -12,12 +12,15 @@ import { techEffect } from './economy.js';
  * Las tecnologías posteriores a 2026 tienen coste muy incierto y su descubrimiento es probabilístico.
  */
 
+/** Escala global de costes (calibrada para que un país rico adopte 1-3 tecnologías por año). */
+export const TECH_COST_SCALE = 0.55;
+
 export function currentYear(day: number): number { return 1990 + Math.floor(day / 360); }
 
 export function researchPoints(sim: Sim, c: CountryState): number {
   const scienceReal = Math.max(0, c.budget.science) / 100 * c.econ.realGDP;
   const hc = c.stocks.humanCapital;
-  let base = 45 * Math.pow(scienceReal, 0.6) * (0.4 + hc) * (1 + techEffect(c, 'research')) + 6 * hc + 0.6 * c.econ.sectors.tech.output;
+  let base = 90 * Math.sqrt(scienceReal) * (0.4 + hc) * (1 + techEffect(c, 'research')) + 40 * hc + 0.6 * c.econ.sectors.tech.output;
   // cooperación científica: una fracción de la investigación de los socios
   let coop = 0;
   for (const other of sim.aliveCountries()) {
@@ -46,9 +49,9 @@ export function techCost(sim: Sim, c: CountryState, t: TechDef): number {
     if (hasTreaty(sim.state, c.id, o.id, 'trade_agreement') || hasTreaty(sim.state, c.id, o.id, 'science_cooperation') || sharedOrganizations(sim.state, c.id, o.id).length) partners++;
   }
   const lp = sim.params(c);
-  const diffusion = clamp(1 - 0.72 * Math.pow(ad, 0.8) * (0.5 + 0.5 * (1 - lp.tradeBarriers)) - 0.04 * Math.min(4, partners) - 0.08 * lp.fdiOpenness * ad, 0.15, 1);
+  const diffusion = clamp(1 - 0.8 * Math.pow(ad, 0.6) * (0.5 + 0.5 * (1 - lp.tradeBarriers)) - 0.04 * Math.min(4, partners) - 0.08 * lp.fdiOpenness * ad, 0.15, 1);
   const early = 1 + Math.max(0, t.year - currentYear(sim.day) - 2) * 0.09;
-  return t.cost * variance * diffusion * early;
+  return TECH_COST_SCALE * t.cost * variance * diffusion * early;
 }
 
 export function canResearch(c: CountryState, t: TechDef): { ok: boolean; reason?: string } {

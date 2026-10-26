@@ -251,7 +251,7 @@ export function NewsPanel() {
     if (tab === 'world') return e.scope === 'world';
     if (tab === 'national') return !!me && e.countries.includes(me);
     if (tab === 'economy') return ['devaluation', 'fiscal_crisis', 'banking_crisis', 'hyperinflation', 'default', 'restructuring', 'oil_shock', 'oil_glut', 'food_crisis', 'privatization_done', 'nationalization', 'market_return'].includes(e.type);
-    if (tab === 'diplomacy') return ['treaty', 'treaty_broken', 'treaty_cancelled', 'sanctions', 'sanctions_lifted', 'recognition', 'org_created', 'org_join', 'org_leave', 'ambassador_recalled', 'unification', 'independence', 'territory_transfer'].includes(e.type);
+    if (tab === 'diplomacy') return ['treaty', 'treaty_broken', 'treaty_cancelled', 'sanctions', 'sanctions_lifted', 'recognition', 'org_created', 'org_join', 'org_leave', 'ambassador_recalled', 'unification', 'independence', 'territory_transfer', 'state_collapse', 'state_failing', 'state_dissolved'].includes(e.type);
     return e.type.startsWith('war') || ['battle_start', 'battle_end', 'province_captured', 'unit_surrender', 'fleet_sunk', 'ceasefire', 'capitulation', 'separate_peace', 'call_declined'].includes(e.type);
   };
   return (

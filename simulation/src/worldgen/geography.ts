@@ -543,10 +543,13 @@ export function generateGeography(params: GeoParams): GeoResult {
       }
     }
   }
-  // estrechos: una celda de mar que toca provincias de distintas masas de tierra
+  // estrechos: canales de una o dos celdas de mar entre provincias de distintas masas de tierra
   for (const c of seaCells) {
     const touching = new Set<number>();
-    for (const n of neighborsOf(c, W, H, nb)) if (cellProvince[n] >= 0) touching.add(cellProvince[n]);
+    for (const n of neighborsOf(c, W, H, nb)) {
+      if (cellProvince[n] >= 0) touching.add(cellProvince[n]);
+      else if (cellSea[n] >= 0) for (const m of neighborsOf(n, W, H, nb)) if (cellProvince[m] >= 0) touching.add(cellProvince[m]);
+    }
     const list = [...touching];
     for (let a = 0; a < list.length; a++) for (let b = a + 1; b < list.length; b++) {
       const pa = provinces[list[a]], pb = provinces[list[b]];

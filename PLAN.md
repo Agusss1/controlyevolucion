@@ -65,6 +65,7 @@ El mapa es un mundo inventado sobre una rejilla hexagonal con provincias, no geo
 | Funcionalidad | Estado |
 |---|---|
 | Mundo oficial: 47 países, continentes, islas, ríos navegables, montañas, desiertos, recursos | ✅ verificado |
+| Movimiento coherente con la geografía: tierra y río dentro de cada masa, estrechos (11 en el mundo oficial) entre masas, sin flotas en países sin costa | ✅ verificado |
 | Mundo aleatorio con semilla (40–70 países), reproducible | ✅ verificado (varias semillas) |
 | Provincias contiguas, adyacencias simétricas, sin celdas huérfanas | ✅ verificado |
 | Países desiguales (gigantes, microestados petroleros) | ✅ verificado |
@@ -88,6 +89,7 @@ El mapa es un mundo inventado sobre una rejilla hexagonal con provincias, no geo
 | Ocupación ≠ soberanía; la soberanía solo cambia por tratado | ✅ verificado |
 | Guerras entre humanos: pendiente → preparación → activa ↔ congelada; sin pérdida territorial desconectado | ✅ verificado |
 | Independencias con Estado completo e identificador persistente; unificaciones | ✅ verificado (independencia) |
+| Colapso estatal: un Estado fallido durante meses se fragmenta en sucesores completos | ✅ verificado (prueba directa y emergente) |
 | Eventos y decisiones emergentes (protestas, separatismo, crisis bancaria, hiperinflación, corrupción, juntas…) | ✅ implementado |
 | IA por perfiles con puntuación e información imperfecta | ✅ implementado |
 | Niebla de guerra en las vistas | ✅ implementado |
@@ -106,13 +108,13 @@ El mapa es un mundo inventado sobre una rejilla hexagonal con provincias, no geo
 
 Lo siguiente **no está implementado**:
 
-1. **Anexión unilateral y Estados títeres.** Hoy la soberanía cambia por tratado de paz, unificación, independencia o capitulación de la IA.
+1. **Anexión unilateral y Estados títeres.** Hoy la soberanía cambia por tratado de paz, unificación, independencia, colapso estatal o capitulación de la IA.
 2. **Espionaje activo** (operaciones encubiertas, sabotaje, contrainteligencia). La inteligencia actual solo reduce el error de las estimaciones y mejora el reconocimiento en combate.
 3. **Armas nucleares y disuasión.** Solo existe la energía nuclear como tecnología y sector.
 4. **Pandemias, catástrofes naturales detalladas y refugiados como flujo propio.** Hoy hay eventos genéricos de desastre y migración económica.
 5. **Mercado de armas** entre países.
 6. **Historial de mapas** (reproducción visual de fronteras a lo largo del tiempo).
-7. **Balance de la IA a largo plazo.** La simulación está probada a 3 años; faltan corridas de 30 años y ajustes de calibración.
+7. **Balance a largo plazo.** `scripts/long-run.ts` simula 10 años sin jugadores, sin valores inválidos. Con la calibración actual, el PIB mundial crece +1,4 %/año, la inflación mediana es estable (~5 %), los mercados de materias primas tienen equilibrio y hay ~350 adopciones tecnológicas en la década. Pendiente: corridas de 30 años, crecimiento de los países pobres algo bajo (~0,5–1 %) y gasto público de la IA que sube del 17 al 22 % del PIB.
 8. **Pruebas de interfaz más amplias:** flujos de dos navegadores simultáneos y guerra entre humanos desde la interfaz.
 9. **Escalado horizontal.** Cada partida vive en un único proceso; para varios servidores haría falta asignar cada partida a un nodo.
 10. **Internacionalización** (hoy todo está en español).

@@ -8,7 +8,7 @@ import { generateGeography, validateGeography, crossingKind, type GeoResult } fr
 import { NameRegistry } from './names.js';
 import type { WorldDesign } from '../scenario/design.js';
 
-export const GENERATOR_VERSION = '1.0.0';
+export const GENERATOR_VERSION = '1.1.0';
 
 export interface PoliticalResult {
   map: WorldMap;

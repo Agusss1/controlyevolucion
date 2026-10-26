@@ -104,6 +104,7 @@ La prueba de PostgreSQL usa `TEST_DATABASE_URL` (por defecto `postgresql://cyo:c
 npm run world:official   # regenera geodata/official/vereth-1990.json.gz (+ .sha256)
 npm run world:preview -- mapa.png [semilla]   # PNG del mapa (oficial, o aleatorio con esa semilla)
 npm run docs:world       # regenera docs/MUNDO_OFICIAL.md
+npx tsx scripts/long-run.ts 10 [semilla]   # corrida larga sin jugadores con indicadores anuales
 ```
 
 El mundo oficial (47 países, semilla `CYO-VERETH-1990`) y los mundos aleatorios usan el mismo generador y el mismo motor. La misma semilla con las mismas entradas produce exactamente el mismo mundo, y hay pruebas que lo verifican.
