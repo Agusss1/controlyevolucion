@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { ClockMode } from '@cyo/shared';
 import { useGame } from '../store/game';
-import { emit, disconnect } from '../net/connection';
+import { emit, disconnect, isLocalSession } from '../net/connection';
 import { MapView } from '../map/MapView';
 import { Badge, Button, Card, Flag, Select } from '../ui/kit';
 import { ChatBox } from '../ui/ChatBox';
@@ -20,7 +20,8 @@ export function Lobby() {
   const me = players.find((p) => p.id === you?.playerId);
   const admin = you?.admin;
   const taken = new Set(players.map((p) => p.countryId).filter(Boolean));
-  const invite = `${location.origin}/?join=${game.code}`;
+  const local = isLocalSession(session);
+  const invite = `${location.origin}${location.pathname}?join=${game.code}`;
   const sel = view?.countries.find((c) => c.id === selectedCountry);
 
   const pick = (id: string | null) => emit('lobby:pick', { countryId: id });
@@ -47,11 +48,15 @@ export function Lobby() {
       <aside className="flex w-[380px] flex-col gap-3 overflow-y-auto border-l border-ink-700 bg-ink-900/95 p-3">
         <Card title={game.name} right={<Badge tone="info">Sala de espera</Badge>}>
           <div className="text-xs text-slate-400">{game.worldName}</div>
-          <div className="mt-2 flex items-center gap-2">
-            <div className="rounded border border-brass-500/50 bg-ink-800 px-3 py-1 font-mono text-xl tracking-[0.35em] text-brass-300">{game.code}</div>
-            <Button small onClick={() => copy(invite)}>{copied ? '¡Copiado!' : 'Copiar enlace'}</Button>
-          </div>
-          <div className="mt-1 truncate text-[10px] text-slate-500">{invite}</div>
+          {local ? (
+            <div className="mt-2 rounded border border-ink-600 bg-ink-800/70 px-2 py-1.5 text-[11px] text-slate-300">Partida local de un jugador contra la IA. El motor corre en este navegador y la partida se guarda aquí mismo.</div>
+          ) : (<>
+            <div className="mt-2 flex items-center gap-2">
+              <div className="rounded border border-brass-500/50 bg-ink-800 px-3 py-1 font-mono text-xl tracking-[0.35em] text-brass-300">{game.code}</div>
+              <Button small onClick={() => copy(invite)}>{copied ? '¡Copiado!' : 'Copiar enlace'}</Button>
+            </div>
+            <div className="mt-1 truncate text-[10px] text-slate-500">{invite}</div>
+          </>)}
           {session?.recovery && <details className="mt-2 text-[11px] text-slate-400"><summary className="cursor-pointer">Código de recuperación (guárdalo)</summary><div className="mt-1 break-all font-mono text-[10px] text-slate-300">{session.recovery}</div></details>}
         </Card>
         <Card title={`Jugadores ${players.length}/${game.maxPlayers}`}>
@@ -83,7 +88,7 @@ export function Lobby() {
           <Card title="Configuración">
             <div className="space-y-2 text-sm">
               <label className="block text-xs text-slate-400">Reloj
-                <Select<ClockMode> value={settings.clockMode} onChange={(v) => admin && emit('admin:settings', { clockMode: v })} className="w-full" options={[{ value: 'when_online', label: 'Activo con jugadores conectados' }, { value: 'always', label: 'Siempre activo' }, { value: 'paused', label: 'Pausado' }]} />
+                <Select<ClockMode> value={settings.clockMode} onChange={(v) => admin && emit('admin:settings', { clockMode: v })} className="w-full" options={local ? [{ value: 'when_online', label: 'Activo mientras la página está abierta' }, { value: 'paused', label: 'Pausado' }] : [{ value: 'when_online', label: 'Activo con jugadores conectados' }, { value: 'always', label: 'Siempre activo' }, { value: 'paused', label: 'Pausado' }]} />
               </label>
               <label className="flex items-center gap-2"><input type="checkbox" className="accent-brass-500" disabled={!admin} checked={settings.advancedAI} onChange={(e) => emit('admin:settings', { advancedAI: e.target.checked })} />IA avanzada</label>
               <div className="text-[11px] text-slate-500">Privacidad: {settings.privacy === 'public' ? 'pública' : 'privada'} · gracia de reconexión {settings.warGraceSeconds} s · preparación de guerra {settings.warPrepDays} días</div>

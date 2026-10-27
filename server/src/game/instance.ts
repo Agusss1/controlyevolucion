@@ -26,6 +26,11 @@ export function stateHash(state: WorldState): string { return createHash('sha256
  * jugadores, el registro de comandos (para recuperación y reproducción determinista) y las
  * instantáneas periódicas.
  */
+/** Tiempo máximo de simulación continua por tick (ms) y atraso máximo tolerado (días). */
+const TICK_BUDGET_MS = 200;
+const MAX_LAG_DAYS = 5;
+const STATE_EVERY_MS = 400;
+
 export class GameInstance {
   row: GameRow;
   map: WorldMap;
@@ -42,6 +47,8 @@ export class GameInstance {
   private pendingCommands: Promise<unknown> = Promise.resolve();
   private timers = new Set<NodeJS.Timeout>();
   private disposed = false;
+  private stateTimer: NodeJS.Timeout | null = null;
+  private lastStateAt = 0;
 
   /** Libera temporizadores (al descargar la partida o apagar el servidor). */
   dispose(): void {
@@ -307,9 +314,20 @@ export class GameInstance {
       try {
         await this.pendingCommands;
         const toRun = Math.min(target - this.state.day, 30);
-        for (let i = 0; i < toRun; i++) { await this.advanceOneDay(); ran++; }
+        // se cede el bucle de eventos entre días y se acota el trabajo por tick: las conexiones y los
+        // comandos siguen atendiéndose aunque la simulación vaya atrasada
+        const deadline = Date.now() + TICK_BUDGET_MS;
+        for (let i = 0; i < toRun; i++) {
+          await this.advanceOneDay();
+          ran++;
+          await new Promise((r) => setImmediate(r));
+          if (Date.now() > deadline) break;
+        }
       } finally { this.busy = false; }
     }
+    // si el servidor no da abasto con el reloj, el atraso no se acumula sin límite: el juego va más lento
+    const maxLag = MAX_LAG_DAYS * this.config.msPerDay;
+    if (this.row.activeMs - this.state.day * this.config.msPerDay > maxLag) this.row.activeMs = this.state.day * this.config.msPerDay + maxLag;
     return ran;
   }
 
@@ -363,13 +381,30 @@ export class GameInstance {
 
   sendStateTo(playerId: string): void { this.transport.send(playerId, 'state', this.playerPayload(playerId)); }
 
+  /**
+   * Los acontecimientos se envían enseguida; el estado completo, como mucho cada STATE_EVERY_MS: si el
+   * reloj avanza varios días seguidos (recuperación tras un reinicio, servidor lento) no se satura la red
+   * ni a los clientes con estados intermedios que nadie llega a ver.
+   */
   broadcastState(events: GameEvent[] = []): void {
     for (const [pid, n] of this.connections) if (n > 0) {
-      this.sendStateTo(pid);
       const p = this.players.get(pid);
       const mine = events.filter((e) => e.scope === 'world' || (p?.countryId && e.countries.includes(p.countryId)));
       if (mine.length) this.transport.send(pid, 'events', mine);
     }
+    if (this.stateTimer) return;
+    const wait = Math.max(0, this.lastStateAt + STATE_EVERY_MS - Date.now());
+    const flush = () => {
+      this.stateTimer = null;
+      if (this.disposed) return;
+      this.lastStateAt = Date.now();
+      for (const [pid, n] of this.connections) if (n > 0) this.sendStateTo(pid);
+    };
+    if (wait === 0) { flush(); return; }
+    const t = setTimeout(() => { this.timers.delete(t); flush(); }, wait);
+    t.unref?.();
+    this.timers.add(t);
+    this.stateTimer = t;
   }
 
   broadcastLobby(): void { this.transport.broadcast(this.id, 'lobby', { game: this.summary(), settings: this.row.settings, players: this.lobbyPlayers(), admin: this.row.adminPlayerId }); }

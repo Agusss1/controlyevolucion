@@ -5,6 +5,7 @@ import { connect } from '../net/connection';
 import { Badge, Button, Card, Flag, Input } from '../ui/kit';
 import { ARCHETYPE_NAMES, REGIME_NAMES, fmtBn, fmtPop } from '../ui/format';
 import { ScreenFrame } from './ScreenFrame';
+import { useServer } from '../net/useServer';
 
 export function JoinGame() {
   const setScreen = useGame((s) => s.setScreen);
@@ -16,6 +17,7 @@ export function JoinGame() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [filter, setFilter] = useState('');
+  const server = useServer();
 
   useEffect(() => {
     const c = code.trim();
@@ -44,6 +46,12 @@ export function JoinGame() {
 
   return (
     <ScreenFrame title="Unirse con código" onBack={() => setScreen('menu')}>
+      {server === false && (
+        <div className="mb-4 rounded border border-amber-500/40 bg-amber-950/40 px-3 py-2 text-sm text-amber-100">
+          Este sitio no tiene servidor multijugador, así que no hay partidas a las que unirse. Puedes jugar solo contra la IA desde <button className="underline" onClick={() => setScreen('create')}>Nueva partida</button>.
+          Para jugar con amigos, CYO necesita su servidor Node.js (ver README).
+        </div>
+      )}
       <div className="grid gap-4 md:grid-cols-3">
         <Card title="Datos" className="md:col-span-1">
           <label className="mb-2 block text-xs text-slate-400">Código de la partida<Input value={code} onChange={(v) => setCode(v.toUpperCase())} maxLength={12} placeholder="ABC123" className="font-mono tracking-[0.3em]" /></label>

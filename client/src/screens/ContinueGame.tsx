@@ -6,14 +6,24 @@ import { api, forgetSession, loadSessions, saveSession, type SessionInfo } from 
 import { connect } from '../net/connection';
 import { Badge, Button, Card, Input } from '../ui/kit';
 import { ScreenFrame } from './ScreenFrame';
+import { useServer } from '../net/useServer';
+import { deleteSave, listSaves, type LocalMeta } from '../local/db';
 
 export function ContinueGame() {
   const setScreen = useGame((s) => s.setScreen);
   const [sessions, setSessions] = useState(loadSessions());
   const [recovery, setRecovery] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const mine = useQuery({ queryKey: ['mine', sessions.map((s) => s.gameId).join(',')], queryFn: () => api.mine(sessions.map((s) => s.gameId)) });
-  const pub = useQuery({ queryKey: ['public'], queryFn: () => api.publicGames() });
+  const server = useServer();
+  const mine = useQuery({ queryKey: ['mine', sessions.map((s) => s.gameId).join(',')], queryFn: () => api.mine(sessions.map((s) => s.gameId)), enabled: server === true });
+  const pub = useQuery({ queryKey: ['public'], queryFn: () => api.publicGames(), enabled: server === true });
+  const locals = useQuery({ queryKey: ['local-saves'], queryFn: () => listSaves().catch(() => [] as LocalMeta[]) });
+  const resumeLocal = (m: LocalMeta) => resume({ gameId: `local:${m.id}`, code: 'LOCAL', playerId: 'local', token: '', name: m.playerName, savedAt: Date.now() });
+  const removeLocal = async (m: LocalMeta) => {
+    if (!confirm(`¿Borrar definitivamente «${m.name}»? No se puede deshacer.`)) return;
+    await deleteSave(m.id);
+    void locals.refetch();
+  };
 
   const resume = (s: SessionInfo) => {
     useGame.getState().setSession(s);
@@ -32,6 +42,28 @@ export function ContinueGame() {
 
   return (
     <ScreenFrame title="Continuar partida" onBack={() => setScreen('menu')}>
+      {(locals.data?.length ?? 0) > 0 && (
+        <Card title="Partidas de un jugador en este navegador" className="mb-4">
+          <div className="space-y-2">
+            {locals.data!.map((m) => (
+              <div key={m.id} className="flex items-center gap-3 rounded border border-ink-600 bg-ink-800/60 px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm text-slate-100">{m.name} <span className="text-xs text-slate-500">{m.worldName}</span></div>
+                  <div className="text-[11px] text-slate-400">{formatDate(m.day)} · {m.countryName ? `gobernando ${m.countryName}` : 'sin país elegido'} · como {m.playerName}</div>
+                </div>
+                <Badge tone={m.status === 'running' ? 'good' : 'info'}>{m.status === 'running' ? 'En curso' : 'Sala'}</Badge>
+                <Button small kind="primary" onClick={() => resumeLocal(m)}>Continuar</Button>
+                <Button small kind="ghost" onClick={() => void removeLocal(m)}>✕</Button>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+      {server === false ? (
+        <div className="rounded border border-ink-600 bg-ink-850/70 px-3 py-2 text-sm text-slate-400">
+          {locals.data?.length ? 'Las partidas multijugador necesitan el servidor de CYO; este sitio funciona en modo un jugador.' : 'No hay partidas guardadas en este navegador. Crea una desde «Nueva partida».'}
+        </div>
+      ) : (
       <div className="grid gap-4 md:grid-cols-2">
         <Card title="Mis partidas">
           {!sessions.length && <div className="text-sm text-slate-500">No hay partidas guardadas en este navegador.</div>}
@@ -72,6 +104,7 @@ export function ContinueGame() {
           </Card>
         </div>
       </div>
+      )}
     </ScreenFrame>
   );
 }

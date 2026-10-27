@@ -38,6 +38,31 @@ npm run dev:server     # API + Socket.IO en :3000
 npm run dev:client     # Vite en :5173 (reenvía /api y /socket.io a :3000)
 ```
 
+## Publicar como página web (Hostinger u otro hosting compartido)
+
+CYO tiene dos modos con la misma interfaz y el mismo motor:
+
+| | Hosting web común (solo archivos) | Servidor Node.js (VPS, Docker) |
+|---|---|---|
+| Qué se sube | La carpeta `client/dist` | Todo el proyecto |
+| Jugadores | Uno, contra la IA | Multijugador con código de partida |
+| Dónde corre la simulación | En el navegador del jugador (Web Worker) | En el servidor |
+| Dónde se guarda | En el navegador (IndexedDB) | PostgreSQL o SQLite |
+
+El juego detecta solo en qué modo está: si `/api/health` no responde, el menú indica «modo un jugador en el navegador».
+
+**Pasos en Hostinger (hPanel → Administrador de archivos):**
+
+1. Compila el sitio: `npm install && npm run build`. Se genera `client/dist/` (con `index.html`, `assets/`, `worlds/` y `.htaccess`).
+2. Sube **el contenido** de `client/dist/` a `public_html/`, de modo que `public_html/index.html` exista. También funciona en una subcarpeta, por ejemplo `public_html/cyo/` → `tudominio.com/cyo/`.
+3. Incluye el archivo oculto `.htaccess`: evita que el navegador guarde una versión vieja de la página.
+
+Si aparece **error 404**, casi siempre es porque se subió el repositorio entero, o la carpeta `dist` dentro de otra carpeta, y entonces no hay un `index.html` donde Hostinger lo busca.
+
+En modo un jugador, el reloj es el mismo (20 s = 1 día) y avanza mientras la página está abierta y visible. La partida se guarda sola cada pocos días de juego y al cerrar o cambiar de pestaña; aparece en **Continuar partida**. Borrar los datos del sitio en el navegador borra las partidas.
+
+Para el **multijugador** hace falta el servidor Node.js (ver «Puesta en marcha»): en Hostinger, un VPS con `docker compose up -d --build`.
+
 ## Cómo jugar con otras personas
 
 1. Quien organiza la partida abre el juego y elige **Nueva partida**. Puede elegir el mundo oficial o uno aleatorio con semilla, el máximo de jugadores, la privacidad y el modo del reloj.
@@ -94,6 +119,7 @@ La copia es portable entre SQLite y PostgreSQL. Por cada partida guarda la fila 
 npm test                 # vitest: mundo, simulación y servidor (incluye PostgreSQL si está disponible)
 npm run typecheck
 node tests/e2e/ui-smoke.mjs http://127.0.0.1:3000 capturas/   # humo de la interfaz con Playwright (servidor ya iniciado)
+node tests/e2e/static-smoke.mjs http://127.0.0.1:8090/ capturas/   # modo sin servidor: client/dist servido como archivos estáticos
 ```
 
 La prueba de PostgreSQL usa `TEST_DATABASE_URL` (por defecto `postgresql://cyo:cyo@localhost/cyo_test`). Si no hay servidor disponible, se omite y lo avisa en la salida.

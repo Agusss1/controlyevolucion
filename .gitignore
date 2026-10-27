@@ -2,8 +2,9 @@ node_modules
 dist
 *.log
 .env
-data/
+/data/
 coverage
 client/dist
 .DS_Store
 backups/
+client/public/worlds/

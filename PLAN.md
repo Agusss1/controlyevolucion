@@ -54,6 +54,7 @@ El mapa es un mundo inventado sobre una rejilla hexagonal con provincias, no geo
 | Comandos idempotentes (sin duplicados tras reconectar) | ✅ verificado |
 | País desconectado: conserva su estado y políticas | ✅ verificado |
 | Reinicio del servidor sin pérdida (instantánea + comandos) | ✅ verificado (SQLite y PostgreSQL) |
+| Servidor atrasado (máquina lenta o recuperación): cede el bucle entre días, acota el atraso y agrupa los envíos de estado | ✅ verificado (pruebas de servidor con reloj acelerado) |
 | Copia de seguridad / restauración portable | ✅ verificado (prueba) |
 | Administrador: configuración, transferencia, liberar país | ✅ implementado |
 | Chat global, por guerra y privado entre países | ✅ implementado |
@@ -103,6 +104,7 @@ El mapa es un mundo inventado sobre una rejilla hexagonal con provincias, no geo
 | Mapa con 14 capas, zoom y arrastre, selección, órdenes con clic derecho | ✅ verificado (navegador) |
 | 19 paneles de gobierno (resumen, economía, presupuesto, impuestos, defensa, diplomacia, tecnología, leyes…) | ✅ verificado (navegador, sin errores de página) |
 | Noticias, notificaciones, decisiones, tutorial, sala de guerra | ✅ implementado |
+| Modo sin servidor (hosting estático): un jugador contra la IA, motor en Web Worker, guardado en IndexedDB | ✅ verificado (navegador: crear, jugar, comando, recargar y continuar) |
 
 ## 4. Hoja de ruta (pendiente)
 

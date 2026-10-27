@@ -1,5 +1,5 @@
 import { useGame } from '../store/game';
-import { disconnect } from '../net/connection';
+import { disconnect, isLocalSession } from '../net/connection';
 import { Button } from '../ui/kit';
 import { Lobby } from './Lobby';
 import { GameHUD } from '../ui/GameHUD';
@@ -9,6 +9,7 @@ export function GameScreen() {
   const err = useGame((s) => s.connectionError);
   const game = useGame((s) => s.game);
   const map = useGame((s) => s.map);
+  const local = isLocalSession(useGame((s) => s.session));
 
   if (!map || !game) {
     return (
@@ -19,7 +20,7 @@ export function GameScreen() {
             <div className="text-red-300">{err ?? 'No se pudo conectar.'}</div>
             <Button onClick={() => { disconnect(); useGame.getState().setScreen('menu'); }}>Volver al menú</Button>
           </>
-        ) : <div className="pulse-dot text-sm text-slate-400">{connection === 'reconnecting' ? 'Reconectando con el servidor…' : 'Conectando con el mundo…'}</div>}
+        ) : <div className="pulse-dot text-sm text-slate-400">{connection === 'reconnecting' ? 'Reconectando con el servidor…' : local ? 'Preparando el mundo en tu navegador…' : 'Conectando con el mundo…'}</div>}
       </div>
     );
   }

@@ -43,3 +43,24 @@ export const api = {
   publicGames: () => req<GameSummary[]>('/api/games/public'),
   mine: (ids: string[]) => req<GameSummary[]>('/api/games/mine', { ids })
 };
+
+/**
+ * ¿Hay servidor de CYO? En un alojamiento estático (p. ej. hosting web compartido) /api no existe:
+ * el juego pasa a modo local (un jugador, motor en el navegador). Se valida que la respuesta sea JSON
+ * del servidor de CYO porque algunos alojamientos devuelven index.html para cualquier ruta.
+ */
+let serverCheck: Promise<boolean> | null = null;
+export function serverAvailable(): Promise<boolean> {
+  serverCheck ??= (async () => {
+    try {
+      const ctl = new AbortController();
+      const t = setTimeout(() => ctl.abort(), 4000);
+      const r = await fetch('/api/health', { signal: ctl.signal, cache: 'no-store' });
+      clearTimeout(t);
+      if (!r.ok) return false;
+      const j = (await r.json()) as { ok?: boolean; store?: string };
+      return j.ok === true && typeof j.store === 'string';
+    } catch { return false; }
+  })();
+  return serverCheck;
+}

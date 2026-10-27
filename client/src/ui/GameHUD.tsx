@@ -153,7 +153,7 @@ function TopBar({ onChat }: { onChat: () => void }) {
           {menu && (
             <div className="absolute right-0 top-8 z-50 w-72 rounded-lg border border-ink-600 bg-ink-900 p-3 text-xs shadow-panel">
               <div className="font-display text-sm text-slate-100">{game?.name}</div>
-              <div className="text-slate-400">Código: <span className="font-mono text-brass-300">{game?.code}</span> · reloj: {settings?.clockMode === 'always' ? 'siempre activo' : settings?.clockMode === 'paused' ? 'pausado' : 'con jugadores'}</div>
+              <div className="text-slate-400">{game?.code === 'LOCAL' ? 'Partida local (un jugador)' : <>Código: <span className="font-mono text-brass-300">{game?.code}</span></>} · reloj: {settings?.clockMode === 'always' ? 'siempre activo' : settings?.clockMode === 'paused' ? 'pausado' : 'con jugadores'}</div>
               {session?.recovery && <details className="mt-2"><summary className="cursor-pointer text-slate-300">Código de recuperación</summary><div className="mt-1 break-all font-mono text-[10px]">{session.recovery}</div></details>}
               {you?.admin && (
                 <div className="mt-2 flex flex-wrap gap-1">
